@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEAVY FINDER</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #e8ff00;
+    --accent2: #ff3c00;
+    --text: #e0e0e0;
+    --muted: #555;
+    --playlist1: #e8ff00;
+    --playlist2: #00e5ff;
+    --playlist3: #ff3c00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    padding: 40px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 8vw, 96px);
+    letter-spacing: 0.05em;
+    line-height: 0.9;
+    color: var(--accent);
+    text-shadow: 4px 4px 0 var(--accent2);
+  }
+
+  .logo span {
+    display: block;
+    font-size: 0.35em;
+    color: var(--muted);
+    letter-spacing: 0.3em;
+    text-shadow: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 300;
+  }
+
+  #auth-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 12px 28px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  #auth-btn:hover { background: #fff; transform: translateY(-2px); }
+
+  #user-info {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  #user-info.visible { display: flex; }
+
+  #user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .sidebar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+
+  .playlist-card {
+    padding: 16px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .playlist-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    transition: height 0.2s;
+  }
+
+  .playlist-card.p1::before { background: var(--playlist1); }
+  .playlist-card.p2::before { background: var(--playlist2); }
+  .playlist-card.p3::before { background: var(--playlist3); }
+
+  .playlist-card:hover, .playlist-card.active {
+    background: var(--surface2);
+    border-color: var(--muted);
+  }
+
+  .playlist-card.active { border-color: var(--accent); }
+
+  .playlist-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .playlist-card.p1 .playlist-label { color: var(--playlist1); }
+  .playlist-card.p2 .playlist-label { color: var(--playlist2); }
+  .playlist-card.p3 .playlist-label { color: var(--playlist3); }
+
+  .playlist-name {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .playlist-desc {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* MAIN CONTENT */
+  .content {
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .prompt-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+  }
+
+  .prompt-area::before {
+    content: 'TARGET PLAYLIST';
+    position: absolute;
+    top: -10px; left: 16px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+  }
+
+  .selected-playlist-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .selected-playlist-display.p1 { color: var(--playlist1); }
+  .selected-playlist-display.p2 { color: var(--playlist2); }
+  .selected-playlist-display.p3 { color: var(--playlist3); }
+
+  .selected-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+
+  .generate-btn {
+    margin-top: 20px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 14px 32px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .generate-btn:hover:not(:disabled) {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .generate-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .generate-btn.loading .spinner { display: block; }
+  .generate-btn.loading .btn-text { opacity: 0.5; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RESULTS */
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .results-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .add-all-btn {
+    background: transparent;
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 8px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .add-all-btn:hover { background: var(--accent2); color: #000; }
+  .add-all-btn.visible { display: block; }
+
+  .tracks-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .track-row {
+    display: grid;
+    grid-template-columns: 40px 1fr auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .track-row:hover { background: var(--surface); border-color: var(--border); }
+
+  .track-num {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .track-info { min-width: 0; }
+
+  .track-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-artist {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-album {
+    font-size: 11px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+
+  .track-add-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .track-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .track-add-btn.added { border-color: #1db954; color: #1db954; cursor: default; }
+  .track-add-btn.added::after { content: '✓'; font-size: 14px; }
+
+  .status-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 48px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+
+  .status-dot.ok { background: #1db954; }
+  .status-dot.error { background: var(--accent2); }
+  .status-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .login-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    gap: 24px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .login-overlay h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  .login-overlay p {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 400px;
+    line-height: 1.7;
+  }
+
+  .login-overlay .big-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 16px 48px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    transition: all 0.2s;
+  }
+
+  .login-overlay .big-btn:hover { background: #fff; }
+
+  .error-msg {
+    background: rgba(255,60,0,0.1);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .error-msg.visible { display: block; }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); padding: 20px 16px; }
+    .content { padding: 20px 16px; }
+    header { padding: 24px 16px 16px; }
+    .track-album { display: none; }
+    .status-bar { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="logo" style="text-align:center">HEAVY<br>FINDER<span>SPOTIFY RECOMMENDER</span></div>
+  <p>Connetti il tuo account Spotify per scoprire nuovi brani che matchano i tuoi gusti metal e aggiungerli alle tue playlist.</p>
+  <button class="big-btn" onclick="startAuth()">▶ CONNETTI SPOTIFY</button>
+</div>
+
+<header>
+  <div class="logo">HEAVY<br>FINDER<span>SPOTIFY RECOMMENDER</span></div>
+  <div id="user-info">
+    <img id="user-avatar" src="" alt="">
+    <div>
+      <div id="user-name" style="font-size:13px;color:#e0e0e0;"></div>
+      <div style="font-size:10px;color:var(--muted);letter-spacing:0.1em">CONNESSO</div>
+    </div>
+    <button id="auth-btn" onclick="logout()" style="font-size:11px;padding:8px 16px;">LOGOUT</button>
+  </div>
+  <button id="auth-btn-top" onclick="startAuth()" style="display:none">CONNETTI SPOTIFY</button>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">PLAYLIST TARGET</div>
+
+    <div class="playlist-card p1 active" data-index="0" onclick="selectPlaylist(0)">
+      <div class="playlist-label">01 / HEAVY CORE</div>
+      <div class="playlist-name">Modern Metal & Djent</div>
+      <div class="playlist-desc">Metalcore, Djent, Nu-Metal. Riff pesanti, breakdown e prog tecnico.</div>
+    </div>
+
+    <div class="playlist-card p2" data-index="1" onclick="selectPlaylist(1)">
+      <div class="playlist-label">02 / PROG INST</div>
+      <div class="playlist-name">Prog Strumentale & Fusion</div>
+      <div class="playlist-desc">Prog metal, strumentale, fusion. Meno aggressivo, più tecnico e atmosferico.</div>
+    </div>
+
+    <div class="playlist-card p3" data-index="2" onclick="selectPlaylist(2)">
+      <div class="playlist-label">03 / SAX METAL</div>
+      <div class="playlist-name">Metal con Sax</div>
+      <div class="playlist-desc">Metal che integra il sassofono. Nicchia estrema, qualità altissima.</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="prompt-area">
+      <div class="selected-playlist-display p1" id="selected-title">Modern Metal & Djent</div>
+      <div class="selected-desc" id="selected-desc">
+        Una combinazione di Modern Metal, Metalcore e Progressive Metal/Djent. Artisti di riferimento: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar. Caratterizzata da riff pesanti, breakdown, componenti melodiche e tecniche. Chitarre 7/8 corde, accordature basse.
+      </div>
+      <button class="generate-btn" id="gen-btn" onclick="generateRecommendations()">
+        <div class="spinner"></div>
+        <span class="btn-text">⚡ GENERA SUGGERIMENTI</span>
+      </button>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+
+    <div class="results-header">
+      <div class="results-title" id="results-title">— IN ATTESA —</div>
+      <button class="add-all-btn" id="add-all-btn" onclick="addAllTracks()">+ AGGIUNGI TUTTI</button>
+    </div>
+
+    <div class="tracks-grid" id="tracks-grid"></div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">NON AUTENTICATO</span>
+</div>
+
+<script>
+const CLIENT_ID = '2e0345cc0bf6488cb14cd74f15319b62';
+const REDIRECT_URI = 'http://127.0.0.1:3000/metal-recommender.html';
+const SCOPES = 'playlist-modify-public playlist-modify-private playlist-read-private user-read-private';
+
+const PLAYLISTS = [
+  {
+    id: '1q9TKNfIZWESoWUigAyT10',
+    label: 'Modern Metal & Djent',
+    color: 'p1',
+    description: 'Una combinazione di Modern Metal, Metalcore e Progressive Metal/Djent. Artisti di riferimento: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar. Caratterizzata da riff pesanti, breakdown, componenti melodiche e tecniche. Chitarre 7/8 corde, accordature basse.',
+    prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
+- Genres: Modern Metal, Metalcore, Progressive Metal, Djent, Nu-Metal
+- Reference artists: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar
+- Characteristics: heavy riffs, breakdowns, melodic/atmospheric parts, technical prog elements, 7/8 string guitars, drop tunings
+- Mix brutal metalcore energy with technical prog precision
+- Include both well-known and deep-cut tracks, from any era
+- Respond ONLY with a JSON array, no markdown, no preamble. Format: [{"title":"Track Name","artist":"Artist Name","reason":"one short sentence why it fits"}]`
+  },
+  {
+    id: '4MCECfPUMBkI8HGSwjekb6',
+    label: 'Prog Strumentale & Fusion',
+    color: 'p2',
+    description: 'Prog metal e metal tecnico, privilegia brani strumentali, meno aggressivi. Prog rock come Plini, focus su chitarra elettrica incisiva (come Syncatto). Apre a sonorità fusion come Sunrise di Plini.',
+    prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
+- Genres: Progressive Metal, Instrumental Metal, Prog Rock, Fusion, Djent instrumental
+- Reference artists: Plini, Syncatto, Animals as Leaders, Intervals, Polyphia
+- Characteristics: instrumental or mostly instrumental, technically complex but melodic, fusion elements welcome, less aggressive than straight metalcore, expressive electric guitar as focal point
+- Can include prog rock if it has that technical incisive guitar quality
+- Include both well-known and deep-cut tracks, from any era
+- Respond ONLY with a JSON array, no markdown, no preamble. Format: [{"title":"Track Name","artist":"Artist Name","reason":"one short sentence why it fits"}]`
+  },
+  {
+    id: '6gjB4V4xFSmrp2EcDDFJ3I',
+    label: 'Metal con Sax',
+    color: 'p3',
+    description: 'Iper specifica: metal che integra il sassofono come elemento centrale, non decorativo. Esempio perfetto: Hold On To Anything dei Young Medicine.',
+    prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
+- Core requirement: Metal or heavy music that prominently features saxophone as an integral part (not just a brief cameo)
+- Reference track: "Hold On To Anything" by Young Medicine
+- Acceptable sub-genres: metalcore with sax, prog metal with sax, nu-metal with sax, avant-garde metal, jazz metal
+- The saxophone should be a CORE element, not decoration
+- Can include avant-garde, experimental, or fusion if the metal element is strong
+- Include both well-known and obscure tracks, from any era
+- Respond ONLY with a JSON array, no markdown, no preamble. Format: [{"title":"Track Name","artist":"Artist Name","reason":"one short sentence why it fits"}]`
+  }
+];
+
+let accessToken = null;
+let selectedIndex = 0;
+let currentTracks = [];
+let addedUris = new Set();
+
+// PKCE helpers
+function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function generateCodeChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function startAuth() {
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('pkce_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    state: 'heavyfinder'
+  });
+  window.location.href = `https://accounts.spotify.com/authorize?${params}`;
+}
+
+async function exchangeCode(code) {
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  if (!verifier) { setStatus('Verifier mancante — riprova il login', 'error'); return; }
+  const resp = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI,
+      client_id: CLIENT_ID,
+      code_verifier: verifier
+    })
+  });
+  const data = await resp.json();
+  if (data.access_token) {
+    accessToken = data.access_token;
+    localStorage.setItem('spotify_token', accessToken);
+    localStorage.setItem('spotify_token_exp', Date.now() + (data.expires_in * 1000));
+    sessionStorage.removeItem('pkce_verifier');
+    window.history.replaceState({}, '', window.location.pathname);
+    await initApp();
+  } else {
+    setStatus('Auth fallita: ' + (data.error_description || data.error), 'error');
+  }
+}
+
+function logout() {
+  accessToken = null;
+  localStorage.removeItem('spotify_token');
+  localStorage.removeItem('spotify_token_exp');
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('user-info').classList.remove('visible');
+  setStatus('NON AUTENTICATO', '');
+}
+
+async function initApp() {
+  setStatus('Caricamento profilo...', 'loading');
+  try {
+    const me = await spotifyFetch('https://api.spotify.com/v1/me');
+    document.getElementById('user-info').classList.add('visible');
+    document.getElementById('user-name').textContent = me.display_name || me.id;
+    if (me.images && me.images[0]) document.getElementById('user-avatar').src = me.images[0].url;
+    document.getElementById('login-overlay').style.display = 'none';
+    setStatus('CONNESSO — ' + (me.display_name || me.id), 'ok');
+  } catch(e) {
+    setStatus('Errore profilo: ' + e.message, 'error');
+  }
+}
+
+async function spotifyFetch(url, options = {}) {
+  const resp = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (resp.status === 401) { logout(); throw new Error('Token scaduto, effettua di nuovo il login'); }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  if (resp.status === 204) return {};
+  return resp.json();
+}
+
+function selectPlaylist(index) {
+  selectedIndex = index;
+  document.querySelectorAll('.playlist-card').forEach((c, i) => c.classList.toggle('active', i === index));
+  const pl = PLAYLISTS[index];
+  const titleEl = document.getElementById('selected-title');
+  titleEl.textContent = pl.label;
+  titleEl.className = 'selected-playlist-display ' + pl.color;
+  document.getElementById('selected-desc').textContent = pl.description;
+  document.getElementById('tracks-grid').innerHTML = '';
+  document.getElementById('results-title').textContent = '— IN ATTESA —';
+  document.getElementById('add-all-btn').classList.remove('visible');
+  document.getElementById('error-msg').classList.remove('visible');
+  currentTracks = [];
+}
+
+async function generateRecommendations() {
+  if (!accessToken) { showError('Devi prima autenticarti con Spotify.'); return; }
+  const btn = document.getElementById('gen-btn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  document.getElementById('error-msg').classList.remove('visible');
+  document.getElementById('tracks-grid').innerHTML = '';
+  document.getElementById('add-all-btn').classList.remove('visible');
+  setStatus('Interrogo Claude API per suggerimenti...', 'loading');
+
+  const pl = PLAYLISTS[selectedIndex];
+
+  try {
+    // Call Claude API via Anthropic
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: pl.prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content.map(i => i.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const suggestions = JSON.parse(clean);
+
+    if (!Array.isArray(suggestions) || suggestions.length === 0) throw new Error('Nessun suggerimento ricevuto');
+
+    setStatus('Cerco le tracce su Spotify...', 'loading');
+    currentTracks = [];
+
+    for (const s of suggestions) {
+      try {
+        const q = encodeURIComponent(`track:${s.title} artist:${s.artist}`);
+        const res = await spotifyFetch(`https://api.spotify.com/v1/search?q=${q}&type=track&limit=1`);
+        if (res.tracks?.items?.length > 0) {
+          currentTracks.push({ ...s, track: res.tracks.items[0] });
+        }
+      } catch(e) { /* skip single track errors */ }
+    }
+
+    renderTracks();
+    setStatus(`${currentTracks.length} brani trovati per "${pl.label}"`, 'ok');
+  } catch(e) {
+    showError('Errore: ' + e.message);
+    setStatus('Errore nella generazione', 'error');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function renderTracks() {
+  const grid = document.getElementById('tracks-grid');
+  grid.innerHTML = '';
+  document.getElementById('results-title').textContent = `${currentTracks.length} SUGGERIMENTI`;
+
+  if (currentTracks.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px">Nessuna traccia trovata su Spotify.</div>';
+    return;
+  }
+
+  document.getElementById('add-all-btn').classList.add('visible');
+
+  currentTracks.forEach((item, i) => {
+    const t = item.track;
+    const alreadyAdded = addedUris.has(t.uri);
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    row.style.animationDelay = `${i * 40}ms`;
+    row.innerHTML = `
+      <div class="track-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="track-info">
+        <div class="track-name" title="${esc(t.name)}">${esc(t.name)}</div>
+        <div class="track-artist">${esc(t.artists.map(a=>a.name).join(', '))}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4">${esc(item.reason)}</div>
+      </div>
+      <div class="track-album">${esc(t.album.name)}</div>
+      <button class="track-add-btn ${alreadyAdded ? 'added' : ''}" 
+              id="add-btn-${i}" 
+              onclick="${alreadyAdded ? '' : `addTrack(${i})`}" 
+              title="${alreadyAdded ? 'Già aggiunto' : 'Aggiungi alla playlist'}">
+        ${alreadyAdded ? '' : '+'}
+      </button>
+    `;
+    grid.appendChild(row);
+  });
+}
+
+async function addTrack(index) {
+  if (!accessToken) { showError('Non autenticato.'); return; }
+  const item = currentTracks[index];
+  const pl = PLAYLISTS[selectedIndex];
+  const btn = document.getElementById(`add-btn-${index}`);
+  btn.disabled = true;
+  btn.textContent = '…';
+  setStatus(`Aggiungo "${item.track.name}" alla playlist...`, 'loading');
+
+  try {
+    await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
+      method: 'POST',
+      body: JSON.stringify({ uris: [item.track.uri] })
+    });
+    addedUris.add(item.track.uri);
+    btn.className = 'track-add-btn added';
+    btn.onclick = null;
+    btn.textContent = '';
+    setStatus(`"${item.track.name}" aggiunto a ${pl.label}`, 'ok');
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '+';
+    showError('Errore aggiunta: ' + e.message);
+    setStatus('Errore aggiunta traccia', 'error');
+  }
+}
+
+async function addAllTracks() {
+  if (!accessToken || currentTracks.length === 0) return;
+  const pl = PLAYLISTS[selectedIndex];
+  const uris = currentTracks.map(i => i.track.uri).filter(u => !addedUris.has(u));
+  if (uris.length === 0) { setStatus('Tutti i brani sono già stati aggiunti', 'ok'); return; }
+
+  document.getElementById('add-all-btn').disabled = true;
+  setStatus(`Aggiungo ${uris.length} brani alla playlist...`, 'loading');
+
+  try {
+    // Spotify allows max 100 tracks per request
+    for (let i = 0; i < uris.length; i += 100) {
+      await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
+        method: 'POST',
+        body: JSON.stringify({ uris: uris.slice(i, i+100) })
+      });
+    }
+    uris.forEach(u => addedUris.add(u));
+    // Update buttons
+    currentTracks.forEach((item, idx) => {
+      const btn = document.getElementById(`add-btn-${idx}`);
+      if (btn && addedUris.has(item.track.uri)) {
+        btn.className = 'track-add-btn added';
+        btn.onclick = null;
+        btn.textContent = '';
+      }
+    });
+    setStatus(`${uris.length} brani aggiunti a ${pl.label}`, 'ok');
+  } catch(e) {
+    showError('Errore aggiunta multipla: ' + e.message);
+    setStatus('Errore aggiunta', 'error');
+  } finally {
+    document.getElementById('add-all-btn').disabled = false;
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function setStatus(msg, type) {
+  document.getElementById('status-text').textContent = msg.toUpperCase();
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot' + (type ? ' ' + type : '');
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// INIT
+(async () => {
+  // Check for OAuth callback
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+
+  if (code && state === 'heavyfinder') {
+    setStatus('Autenticazione in corso...', 'loading');
+    await exchangeCode(code);
+    return;
+  }
+
+  // Check stored token
+  const storedToken = localStorage.getItem('spotify_token');
+  const tokenExp = localStorage.getItem('spotify_token_exp');
+
+  if (storedToken && tokenExp && Date.now() < parseInt(tokenExp)) {
+    accessToken = storedToken;
+    await initApp();
+  } else {
+    localStorage.removeItem('spotify_token');
+    localStorage.removeItem('spotify_token_exp');
+    setStatus('NON AUTENTICATO', '');
+  }
+})();
+</script>
+</body>
+</html>
