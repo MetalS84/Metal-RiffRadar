@@ -69,23 +69,6 @@
       font-weight: 300;
     }
 
-    #auth-btn {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      padding: 12px 28px;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.15s;
-      clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-    }
-
-    #auth-btn:hover { background: #fff; transform: translateY(-2px); }
-
     #user-info {
       display: none;
       align-items: center;
@@ -101,6 +84,20 @@
       border-radius: 50%;
       border: 1px solid var(--accent);
     }
+
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .logout-btn:hover { border-color: var(--accent2); color: var(--accent2); }
 
     .main {
       display: grid;
@@ -139,7 +136,6 @@
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 3px;
-      transition: height 0.2s;
     }
 
     .playlist-card.p1::before { background: var(--playlist1); }
@@ -239,15 +235,8 @@
       gap: 10px;
     }
 
-    .generate-btn:hover:not(:disabled) {
-      background: var(--accent);
-      color: #000;
-    }
-
-    .generate-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
+    .generate-btn:hover:not(:disabled) { background: var(--accent); color: #000; }
+    .generate-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
     .spinner {
       width: 14px; height: 14px;
@@ -347,6 +336,13 @@
       text-overflow: ellipsis;
     }
 
+    .track-reason {
+      font-size: 10px;
+      color: #444;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
     .track-album {
       font-size: 11px;
       color: #333;
@@ -373,8 +369,7 @@
     }
 
     .track-add-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .track-add-btn.added { border-color: #1db954; color: #1db954; cursor: default; }
-    .track-add-btn.added::after { content: '✓'; font-size: 14px; }
+    .track-add-btn.added { border-color: #1db954; color: #1db954; cursor: default; font-size: 14px; }
 
     .status-bar {
       position: fixed;
@@ -407,7 +402,7 @@
     .login-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.92);
+      background: rgba(0,0,0,0.95);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -418,13 +413,6 @@
       text-align: center;
     }
 
-    .login-overlay h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 48px;
-      color: var(--accent);
-      letter-spacing: 0.1em;
-    }
-
     .login-overlay p {
       font-size: 13px;
       color: var(--muted);
@@ -432,7 +420,7 @@
       line-height: 1.7;
     }
 
-    .login-overlay .big-btn {
+    .big-btn {
       background: var(--accent);
       color: #000;
       border: none;
@@ -447,7 +435,7 @@
       transition: all 0.2s;
     }
 
-    .login-overlay .big-btn:hover { background: #fff; }
+    .big-btn:hover { background: #fff; }
 
     .error-msg {
       background: rgba(255,60,0,0.1);
@@ -456,6 +444,7 @@
       padding: 12px 16px;
       font-size: 12px;
       line-height: 1.5;
+      margin-top: 16px;
       display: none;
     }
 
@@ -487,28 +476,27 @@
       <div id="user-name" style="font-size:13px;color:#e0e0e0;"></div>
       <div style="font-size:10px;color:var(--muted);letter-spacing:0.1em">CONNESSO</div>
     </div>
-    <button id="auth-btn" onclick="logout()" style="font-size:11px;padding:8px 16px;">LOGOUT</button>
+    <button class="logout-btn" onclick="logout()">LOGOUT</button>
   </div>
-  <button id="auth-btn-top" onclick="startAuth()" style="display:none">CONNETTI SPOTIFY</button>
 </header>
 
 <div class="main">
   <div class="sidebar">
     <div class="sidebar-title">PLAYLIST TARGET</div>
 
-    <div class="playlist-card p1 active" data-index="0" onclick="selectPlaylist(0)">
+    <div class="playlist-card p1 active" onclick="selectPlaylist(0)">
       <div class="playlist-label">01 / HEAVY CORE</div>
       <div class="playlist-name">Modern Metal & Djent</div>
       <div class="playlist-desc">Metalcore, Djent, Nu-Metal. Riff pesanti, breakdown e prog tecnico.</div>
     </div>
 
-    <div class="playlist-card p2" data-index="1" onclick="selectPlaylist(1)">
+    <div class="playlist-card p2" onclick="selectPlaylist(1)">
       <div class="playlist-label">02 / PROG INST</div>
       <div class="playlist-name">Prog Strumentale & Fusion</div>
       <div class="playlist-desc">Prog metal, strumentale, fusion. Meno aggressivo, più tecnico e atmosferico.</div>
     </div>
 
-    <div class="playlist-card p3" data-index="2" onclick="selectPlaylist(2)">
+    <div class="playlist-card p3" onclick="selectPlaylist(2)">
       <div class="playlist-label">03 / SAX METAL</div>
       <div class="playlist-name">Metal con Sax</div>
       <div class="playlist-desc">Metal che integra il sassofono. Nicchia estrema, qualità altissima.</div>
@@ -546,6 +534,7 @@
 const CLIENT_ID = '2e0345cc0bf6488cb14cd74f15319b62';
 const REDIRECT_URI = 'https://metals84.github.io/Metal-RiffRadar/metal-recommender.html';
 const SCOPES = 'playlist-modify-public playlist-modify-private playlist-read-private user-read-private';
+const WORKER_URL = 'https://heavy-finder-proxy.stefano-zampieri-hm.workers.dev';
 
 const PLAYLISTS = [
   {
@@ -557,9 +546,10 @@ const PLAYLISTS = [
 - Genres: Modern Metal, Metalcore, Progressive Metal, Djent, Nu-Metal
 - Reference artists: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar
 - Characteristics: heavy riffs, breakdowns, melodic/atmospheric parts, technical prog elements, 7/8 string guitars, drop tunings
-- Mix brutal metalcore energy with technical prog precision
-- Include both well-known and deep-cut tracks, from any era
-- Respond ONLY with a JSON array, no markdown, no preamble. Format: [{"title":"Track Name","artist":"Artist Name","reason":"one short sentence why it fits"}]`
+- Mix well-known and deep-cut tracks, from any era
+- CRITICAL: only suggest tracks that actually exist on Spotify. Do not invent tracks.
+- Respond ONLY with a JSON array, no markdown, no preamble, no trailing text.
+Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why it fits"}]`
   },
   {
     id: '4MCECfPUMBkI8HGSwjekb6',
@@ -569,24 +559,25 @@ const PLAYLISTS = [
     prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
 - Genres: Progressive Metal, Instrumental Metal, Prog Rock, Fusion, Djent instrumental
 - Reference artists: Plini, Syncatto, Animals as Leaders, Intervals, Polyphia
-- Characteristics: instrumental or mostly instrumental, technically complex but melodic, fusion elements welcome, less aggressive than straight metalcore, expressive electric guitar as focal point
-- Can include prog rock if it has that technical incisive guitar quality
-- Include both well-known and deep-cut tracks, from any era
-- Respond ONLY with a JSON array, no markdown, no preamble. Format: [{"title":"Track Name","artist":"Artist Name","reason":"one short sentence why it fits"}]`
+- Characteristics: instrumental or mostly instrumental, technically complex but melodic, fusion elements welcome, less aggressive than metalcore, expressive electric guitar as focal point
+- Mix well-known and deep-cut tracks, from any era
+- CRITICAL: only suggest tracks that actually exist on Spotify. Do not invent tracks.
+- Respond ONLY with a JSON array, no markdown, no preamble, no trailing text.
+Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why it fits"}]`
   },
   {
     id: '6gjB4V4xFSmrp2EcDDFJ3I',
     label: 'Metal con Sax',
     color: 'p3',
     description: 'Iper specifica: metal che integra il sassofono come elemento centrale, non decorativo. Esempio perfetto: Hold On To Anything dei Young Medicine.',
-    prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
-- Core requirement: Metal or heavy music that prominently features saxophone as an integral part (not just a brief cameo)
+    prompt: `You are a music expert specializing in avant-garde and experimental metal. Suggest 10 tracks where saxophone is a CORE, prominent instrument (not decoration).
 - Reference track: "Hold On To Anything" by Young Medicine
-- Acceptable sub-genres: metalcore with sax, prog metal with sax, nu-metal with sax, avant-garde metal, jazz metal
-- The saxophone should be a CORE element, not decoration
-- Can include avant-garde, experimental, or fusion if the metal element is strong
-- Include both well-known and obscure tracks, from any era
-- Respond ONLY with a JSON array, no markdown, no preamble. Format: [{"title":"Track Name","artist":"Artist Name","reason":"one short sentence why it fits"}]`
+- Acceptable: metalcore with sax, prog metal with sax, jazz-metal, avant-garde metal, nu-metal with sax
+- Real bands known for this: Imperial Triumphant, Yakuza (Chicago), Shining (Norway), Dog Fashion Disco, Igorrr
+- The sax must be structurally integral, not a brief solo
+- CRITICAL: only suggest tracks that actually exist on Spotify. Do not invent tracks.
+- Respond ONLY with a JSON array, no markdown, no preamble, no trailing text.
+Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why the sax role is essential"}]`
   }
 ];
 
@@ -714,26 +705,29 @@ async function generateRecommendations() {
   document.getElementById('error-msg').classList.remove('visible');
   document.getElementById('tracks-grid').innerHTML = '';
   document.getElementById('add-all-btn').classList.remove('visible');
-  setStatus('Interrogo Claude API per suggerimenti...', 'loading');
+  setStatus('Chiedo suggerimenti a Gemini...', 'loading');
 
   const pl = PLAYLISTS[selectedIndex];
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Call Gemini via Cloudflare Worker proxy
+    const workerResp = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: pl.prompt }]
-      })
+      body: JSON.stringify({ prompt: pl.prompt })
     });
 
-    const data = await response.json();
-    const raw = data.content.map(i => i.text || '').join('');
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const suggestions = JSON.parse(clean);
+    if (!workerResp.ok) throw new Error(`Worker error: ${workerResp.status}`);
 
+    const workerData = await workerResp.json();
+    const raw = workerData.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+
+    // Extract JSON array even if Gemini adds surrounding text
+    const match = clean.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('Risposta non valida da Gemini');
+
+    const suggestions = JSON.parse(match[0]);
     if (!Array.isArray(suggestions) || suggestions.length === 0) throw new Error('Nessun suggerimento ricevuto');
 
     setStatus('Cerco le tracce su Spotify...', 'loading');
@@ -746,7 +740,7 @@ async function generateRecommendations() {
         if (res.tracks?.items?.length > 0) {
           currentTracks.push({ ...s, track: res.tracks.items[0] });
         }
-      } catch(e) { }
+      } catch(e) { /* skip single track errors */ }
     }
 
     renderTracks();
@@ -766,7 +760,7 @@ function renderTracks() {
   document.getElementById('results-title').textContent = `${currentTracks.length} SUGGERIMENTI`;
 
   if (currentTracks.length === 0) {
-    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px">Nessuna traccia trovata su Spotify.</div>';
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px">Nessuna traccia trovata su Spotify. Riprova.</div>';
     return;
   }
 
@@ -783,14 +777,14 @@ function renderTracks() {
       <div class="track-info">
         <div class="track-name" title="${esc(t.name)}">${esc(t.name)}</div>
         <div class="track-artist">${esc(t.artists.map(a=>a.name).join(', '))}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4">${esc(item.reason)}</div>
+        <div class="track-reason">${esc(item.reason)}</div>
       </div>
       <div class="track-album">${esc(t.album.name)}</div>
-      <button class="track-add-btn ${alreadyAdded ? 'added' : ''}" 
-              id="add-btn-${i}" 
-              onclick="${alreadyAdded ? '' : `addTrack(${i})`}" 
+      <button class="track-add-btn ${alreadyAdded ? 'added' : ''}"
+              id="add-btn-${i}"
+              onclick="${alreadyAdded ? '' : `addTrack(${i})`}"
               title="${alreadyAdded ? 'Già aggiunto' : 'Aggiungi alla playlist'}">
-        ${alreadyAdded ? '' : '+'}
+        ${alreadyAdded ? '✓' : '+'}
       </button>
     `;
     grid.appendChild(row);
@@ -798,13 +792,13 @@ function renderTracks() {
 }
 
 async function addTrack(index) {
-  if (!accessToken) { showError('Non autenticato.'); return; }
+  if (!accessToken) return;
   const item = currentTracks[index];
   const pl = PLAYLISTS[selectedIndex];
   const btn = document.getElementById(`add-btn-${index}`);
   btn.disabled = true;
   btn.textContent = '…';
-  setStatus(`Aggiungo "${item.track.name}" alla playlist...`, 'loading');
+  setStatus(`Aggiungo "${item.track.name}"...`, 'loading');
 
   try {
     await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
@@ -814,7 +808,7 @@ async function addTrack(index) {
     addedUris.add(item.track.uri);
     btn.className = 'track-add-btn added';
     btn.onclick = null;
-    btn.textContent = '';
+    btn.textContent = '✓';
     setStatus(`"${item.track.name}" aggiunto a ${pl.label}`, 'ok');
   } catch(e) {
     btn.disabled = false;
@@ -828,10 +822,10 @@ async function addAllTracks() {
   if (!accessToken || currentTracks.length === 0) return;
   const pl = PLAYLISTS[selectedIndex];
   const uris = currentTracks.map(i => i.track.uri).filter(u => !addedUris.has(u));
-  if (uris.length === 0) { setStatus('Tutti i brani sono già stati aggiunti', 'ok'); return; }
+  if (uris.length === 0) { setStatus('Tutti i brani già aggiunti', 'ok'); return; }
 
   document.getElementById('add-all-btn').disabled = true;
-  setStatus(`Aggiungo ${uris.length} brani alla playlist...`, 'loading');
+  setStatus(`Aggiungo ${uris.length} brani...`, 'loading');
 
   try {
     for (let i = 0; i < uris.length; i += 100) {
@@ -846,12 +840,12 @@ async function addAllTracks() {
       if (btn && addedUris.has(item.track.uri)) {
         btn.className = 'track-add-btn added';
         btn.onclick = null;
-        btn.textContent = '';
+        btn.textContent = '✓';
       }
     });
     setStatus(`${uris.length} brani aggiunti a ${pl.label}`, 'ok');
   } catch(e) {
-    showError('Errore aggiunta multipla: ' + e.message);
+    showError('Errore: ' + e.message);
     setStatus('Errore aggiunta', 'error');
   } finally {
     document.getElementById('add-all-btn').disabled = false;
