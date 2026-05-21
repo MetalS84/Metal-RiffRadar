@@ -569,15 +569,28 @@ Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why
     id: '6gjB4V4xFSmrp2EcDDFJ3I',
     label: 'Metal con Sax',
     color: 'p3',
-    description: 'Iper specifica: metal che integra il sassofono come elemento centrale, non decorativo. Esempio perfetto: Hold On To Anything dei Young Medicine.',
-    prompt: `You are a music expert specializing in avant-garde and experimental metal. Suggest 10 tracks where saxophone is a CORE, prominent instrument (not decoration).
-- Reference track: "Hold On To Anything" by Young Medicine
-- Acceptable: metalcore with sax, prog metal with sax, jazz-metal, avant-garde metal, nu-metal with sax
-- Real bands known for this: Imperial Triumphant, Yakuza (Chicago), Shining (Norway), Dog Fashion Disco, Igorrr
-- The sax must be structurally integral, not a brief solo
-- CRITICAL: only suggest tracks that actually exist on Spotify. Do not invent tracks.
-- Respond ONLY with a JSON array, no markdown, no preamble, no trailing text.
-Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why the sax role is essential"}]`
+    description: 'Metal che integra il sassofono come voce compositiva centrale, non effetto. Il sax non ornamenta, dialoga e guida le strutture armoniche. Esempio: Hold On To Anything (Young Medicine).',
+    prompt: `You are a music expert specializing in compositionally sophisticated metal with integrated woodwinds.
+
+Suggest 10 tracks where saxophone functions as a PRIMARY melodic/harmonic voice—a deliberate compositional choice, not decoration or brief solo.
+
+Reference standard: "Hold On To Anything" by Young Medicine — metalcore intensity with sax as co-lead voice, carrying melodic weight equal to guitars.
+
+Acceptable contexts:
+- Metalcore/post-hardcore where sax carries thematic material
+- Progressive metal where sax is structural (not guest appearance)
+- Jazz-metal fusion with genuine harmonic sophistication
+- Avant-garde metal where sax defines the aesthetic
+- Nu-metal era bands that experimented with brass/woodwinds as core elements
+
+Real precedents: Imperial Triumphant, Yakuza, Shining (Norway), Dog Fashion Disco, Maudlin of the Well, Igorrr, Burnt by the Sun.
+
+Avoid: saxophone solos that are interlude breaks; sax used for novelty or single-track gimmick.
+
+CRITICAL: Only suggest tracks that genuinely exist on Spotify. No invented tracks.
+
+Respond ONLY as a JSON array, no markdown, no preamble, no trailing text.
+[{"title":"Track Name","artist":"Artist Name","reason":"precise description of how sax functions as compositional core in this track"}]`
   }
 ];
 
