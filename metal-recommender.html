@@ -538,7 +538,6 @@ const WORKER_URL = 'https://heavy-finder-proxy.stefano-zampieri-hm.workers.dev';
 
 const PLAYLISTS = [
   {
-    id: '1q9TKNfIZWESoWUigAyT10',
     label: 'Modern Metal & Djent',
     color: 'p1',
     description: 'Una combinazione di Modern Metal, Metalcore e Progressive Metal/Djent. Artisti di riferimento: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar. Caratterizzata da riff pesanti, breakdown, componenti melodiche e tecniche. Chitarre 7/8 corde, accordature basse.',
@@ -552,7 +551,6 @@ const PLAYLISTS = [
 Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why it fits"}]`
   },
   {
-    id: '4MCECfPUMBkI8HGSwjekb6',
     label: 'Prog Strumentale & Fusion',
     color: 'p2',
     description: 'Prog metal e metal tecnico, privilegia brani strumentali, meno aggressivi. Prog rock come Plini, focus su chitarra elettrica incisiva (come Syncatto). Apre a sonorità fusion come Sunrise di Plini.',
@@ -566,7 +564,6 @@ Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why
 Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why it fits"}]`
   },
   {
-    id: '6gjB4V4xFSmrp2EcDDFJ3I',
     label: 'Metal con Sax',
     color: 'p3',
     description: 'Metal che integra il sassofono come voce compositiva centrale, non effetto. Il sax non ornamenta, dialoga e guida le strutture armoniche. Esempio: Hold On To Anything (Young Medicine).',
@@ -710,6 +707,26 @@ function selectPlaylist(index) {
   currentTracks = [];
 }
 
+async function createPlaylist(name, isPublic = false) {
+  const timestamp = new Date().toLocaleString('it-IT').replace(/[\/:]/g, '-');
+  const playlistName = `HEAVY FINDER — ${name} — ${timestamp}`;
+  
+  setStatus('Creo nuova playlist...', 'loading');
+  try {
+    const resp = await spotifyFetch('https://api.spotify.com/v1/me/playlists', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: playlistName,
+        public: isPublic,
+        description: `Suggerimenti generati da HEAVY FINDER`
+      })
+    });
+    return resp.id;
+  } catch(e) {
+    throw new Error('Errore creazione playlist: ' + e.message);
+  }
+}
+
 async function generateRecommendations() {
   if (!accessToken) { showError('Devi prima autenticarti con Spotify.'); return; }
   const btn = document.getElementById('gen-btn');
@@ -721,6 +738,7 @@ async function generateRecommendations() {
   setStatus('Chiedo suggerimenti a Gemini...', 'loading');
 
   const pl = PLAYLISTS[selectedIndex];
+  let playlistId = null;
 
   try {
     // Call Gemini via Cloudflare Worker proxy
@@ -756,8 +774,12 @@ async function generateRecommendations() {
       } catch(e) { /* skip single track errors */ }
     }
 
+    // Create new playlist
+    playlistId = await createPlaylist(pl.label);
+    window.currentPlaylistId = playlistId;
+
     renderTracks();
-    setStatus(`${currentTracks.length} brani trovati per "${pl.label}"`, 'ok');
+    setStatus(`${currentTracks.length} brani trovati. Playlist creata.`, 'ok');
   } catch(e) {
     showError('Errore: ' + e.message);
     setStatus('Errore nella generazione', 'error');
@@ -808,13 +830,16 @@ async function addTrack(index) {
   if (!accessToken) return;
   const item = currentTracks[index];
   const pl = PLAYLISTS[selectedIndex];
+  const playlistId = window.currentPlaylistId;
+  if (!playlistId) { showError('Playlist non creata. Genera di nuovo i suggerimenti.'); return; }
+  
   const btn = document.getElementById(`add-btn-${index}`);
   btn.disabled = true;
   btn.textContent = '…';
   setStatus(`Aggiungo "${item.track.name}"...`, 'loading');
 
   try {
-    await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/items`, {
+    await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
       method: 'POST',
       body: JSON.stringify({ uris: [item.track.uri] })
     });
@@ -822,7 +847,7 @@ async function addTrack(index) {
     btn.className = 'track-add-btn added';
     btn.onclick = null;
     btn.textContent = '✓';
-    setStatus(`"${item.track.name}" aggiunto a ${pl.label}`, 'ok');
+    setStatus(`"${item.track.name}" aggiunto alla playlist`, 'ok');
   } catch(e) {
     btn.disabled = false;
     btn.textContent = '+';
@@ -833,7 +858,9 @@ async function addTrack(index) {
 
 async function addAllTracks() {
   if (!accessToken || currentTracks.length === 0) return;
-  const pl = PLAYLISTS[selectedIndex];
+  const playlistId = window.currentPlaylistId;
+  if (!playlistId) { showError('Playlist non creata. Genera di nuovo i suggerimenti.'); return; }
+  
   const uris = currentTracks.map(i => i.track.uri).filter(u => !addedUris.has(u));
   if (uris.length === 0) { setStatus('Tutti i brani già aggiunti', 'ok'); return; }
 
@@ -842,7 +869,7 @@ async function addAllTracks() {
 
   try {
     for (let i = 0; i < uris.length; i += 100) {
-      await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/items`, {
+      await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
         method: 'POST',
         body: JSON.stringify({ uris: uris.slice(i, i+100) })
       });
@@ -856,7 +883,7 @@ async function addAllTracks() {
         btn.textContent = '✓';
       }
     });
-    setStatus(`${uris.length} brani aggiunti a ${pl.label}`, 'ok');
+    setStatus(`${uris.length} brani aggiunti alla playlist`, 'ok');
   } catch(e) {
     showError('Errore: ' + e.message);
     setStatus('Errore aggiunta', 'error');
