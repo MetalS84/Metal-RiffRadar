@@ -705,6 +705,8 @@ function selectPlaylist(index) {
   document.getElementById('add-all-btn').classList.remove('visible');
   document.getElementById('error-msg').classList.remove('visible');
   currentTracks = [];
+  window.currentPlaylistId = null;
+  addedUris = new Set();
 }
 
 async function createPlaylist(name, isPublic = false) {
@@ -774,12 +776,14 @@ async function generateRecommendations() {
       } catch(e) { /* skip single track errors */ }
     }
 
-    // Create new playlist
-    playlistId = await createPlaylist(pl.label);
-    window.currentPlaylistId = playlistId;
+    // Create playlist only on first generation for this slot
+    if (!window.currentPlaylistId) {
+      playlistId = await createPlaylist(pl.label);
+      window.currentPlaylistId = playlistId;
+    }
 
     renderTracks();
-    setStatus(`${currentTracks.length} brani trovati. Playlist creata.`, 'ok');
+    setStatus(`${currentTracks.length} brani trovati.`, 'ok');
   } catch(e) {
     showError('Errore: ' + e.message);
     setStatus('Errore nella generazione', 'error');
