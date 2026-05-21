@@ -801,7 +801,7 @@ async function addTrack(index) {
   setStatus(`Aggiungo "${item.track.name}"...`, 'loading');
 
   try {
-    await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
+    await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/items`, {
       method: 'POST',
       body: JSON.stringify({ uris: [item.track.uri] })
     });
@@ -829,7 +829,7 @@ async function addAllTracks() {
 
   try {
     for (let i = 0; i < uris.length; i += 100) {
-      await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/tracks`, {
+      await spotifyFetch(`https://api.spotify.com/v1/playlists/${pl.id}/items`, {
         method: 'POST',
         body: JSON.stringify({ uris: uris.slice(i, i+100) })
       });
