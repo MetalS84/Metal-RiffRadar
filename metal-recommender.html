@@ -496,12 +496,6 @@
       <div class="playlist-name">Prog Strumentale & Fusion</div>
       <div class="playlist-desc">Prog metal, strumentale, fusion. Meno aggressivo, più tecnico e atmosferico.</div>
     </div>
-
-    <div class="playlist-card p3" onclick="selectPlaylist(2)">
-      <div class="playlist-label">03 / SAX METAL</div>
-      <div class="playlist-name">Metal con Sax</div>
-      <div class="playlist-desc">Metal che integra il sassofono. Nicchia estrema, qualità altissima.</div>
-    </div>
   </div>
 
   <div class="content">
@@ -563,32 +557,6 @@ Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why
 - CRITICAL: only suggest tracks that actually exist on Spotify. Do not invent tracks.
 - Respond ONLY with a JSON array, no markdown, no preamble, no trailing text.
 Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why it fits"}]`
-  },
-  {
-    label: 'Metal con Sax',
-    color: 'p3',
-    description: 'Metal che integra il sassofono come voce compositiva centrale, non effetto. Il sax non ornamenta, dialoga e guida le strutture armoniche. Esempio: Hold On To Anything (Young Medicine).',
-    prompt: `You are a music expert specializing in compositionally sophisticated metal with integrated woodwinds.
-
-Suggest 10 tracks where saxophone functions as a PRIMARY melodic/harmonic voice—a deliberate compositional choice, not decoration or brief solo.
-
-Reference standard: "Hold On To Anything" by Young Medicine — metalcore intensity with sax as co-lead voice, carrying melodic weight equal to guitars.
-
-Acceptable contexts:
-- Metalcore/post-hardcore where sax carries thematic material
-- Progressive metal where sax is structural (not guest appearance)
-- Jazz-metal fusion with genuine harmonic sophistication
-- Avant-garde metal where sax defines the aesthetic
-- Nu-metal era bands that experimented with brass/woodwinds as core elements
-
-Real precedents: Imperial Triumphant, Yakuza, Shining (Norway), Dog Fashion Disco, Maudlin of the Well, Igorrr, Burnt by the Sun.
-
-Avoid: saxophone solos that are interlude breaks; sax used for novelty or single-track gimmick.
-
-CRITICAL: Only suggest tracks that genuinely exist on Spotify. No invented tracks.
-
-Respond ONLY as a JSON array, no markdown, no preamble, no trailing text.
-[{"title":"Track Name","artist":"Artist Name","reason":"precise description of how sax functions as compositional core in this track"}]`
   }
 ];
 
@@ -710,12 +678,22 @@ function selectPlaylist(index) {
   addedUris = new Set();
 }
 
-async function createPlaylist(name, isPublic = false) {
-  const timestamp = new Date().toLocaleString('it-IT').replace(/[\/:]/g, '-');
-  const playlistName = `HEAVY FINDER — ${name} — ${timestamp}`;
-  
-  setStatus('Creo nuova playlist...', 'loading');
+async function findOrCreateTargetPlaylist(name, isPublic = false) {
+  const playlistName = `HEAVY FINDER — ${name}`;
+  setStatus('Cerco playlist esistente...', 'loading');
   try {
+    let url = 'https://api.spotify.com/v1/me/playlists?limit=50';
+    while (url) {
+      const resp = await spotifyFetch(url);
+      const existing = resp.items?.find(p => p.name === playlistName);
+      if (existing) {
+        return existing.id;
+      }
+      url = resp.next;
+    }
+
+    // Se non esiste, la creiamo
+    setStatus('Creo nuova playlist...', 'loading');
     const resp = await spotifyFetch('https://api.spotify.com/v1/me/playlists', {
       method: 'POST',
       body: JSON.stringify({
@@ -726,7 +704,30 @@ async function createPlaylist(name, isPublic = false) {
     });
     return resp.id;
   } catch(e) {
-    throw new Error('Errore creazione playlist: ' + e.message);
+    throw new Error('Errore ricerca/creazione playlist: ' + e.message);
+  }
+}
+
+async function getPlaylistTracks(playlistId) {
+  try {
+    let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=items(track(name,artists(name))),next&limit=100`;
+    const tracks = [];
+    while (url) {
+      const resp = await spotifyFetch(url);
+      if (resp.items) {
+        for (const item of resp.items) {
+          if (item.track) {
+            const artists = item.track.artists.map(a => a.name).join(', ');
+            tracks.push(`${item.track.name} - ${artists}`);
+          }
+        }
+      }
+      url = resp.next;
+    }
+    return tracks;
+  } catch(e) {
+    console.error('Errore nel recupero delle tracce della playlist:', e);
+    return [];
   }
 }
 
@@ -738,17 +739,35 @@ async function generateRecommendations() {
   document.getElementById('error-msg').classList.remove('visible');
   document.getElementById('tracks-grid').innerHTML = '';
   document.getElementById('add-all-btn').classList.remove('visible');
-  setStatus('Chiedo suggerimenti a Gemini...', 'loading');
+  setStatus('Inizializzazione playlist...', 'loading');
 
   const pl = PLAYLISTS[selectedIndex];
   let playlistId = null;
 
   try {
+    // Trova o crea la playlist prima di chiedere i suggerimenti
+    if (!window.currentPlaylistId) {
+      playlistId = await findOrCreateTargetPlaylist(pl.label);
+      window.currentPlaylistId = playlistId;
+    } else {
+      playlistId = window.currentPlaylistId;
+    }
+
+    // Ottieni i brani già presenti
+    const existingTracks = await getPlaylistTracks(playlistId);
+    let dynamicPrompt = pl.prompt;
+    if (existingTracks.length > 0) {
+      dynamicPrompt += `\n\nCRITICAL EXCLUSION: Do NOT suggest any of the following tracks because they are already present in the playlist:\n` + 
+                       existingTracks.map(t => `- ${t}`).join('\n');
+    }
+
+    setStatus('Chiedo suggerimenti a Gemini...', 'loading');
+
     // Call Gemini via Cloudflare Worker proxy
     const workerResp = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: pl.prompt })
+      body: JSON.stringify({ prompt: dynamicPrompt })
     });
 
     if (!workerResp.ok) throw new Error(`Worker error: ${workerResp.status}`);
@@ -775,12 +794,6 @@ async function generateRecommendations() {
           currentTracks.push({ ...s, track: res.tracks.items[0] });
         }
       } catch(e) { /* skip single track errors */ }
-    }
-
-    // Create playlist only on first generation for this slot
-    if (!window.currentPlaylistId) {
-      playlistId = await createPlaylist(pl.label);
-      window.currentPlaylistId = playlistId;
     }
 
     renderTracks();
