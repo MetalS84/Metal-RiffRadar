@@ -1060,7 +1060,7 @@ async function findOrCreateTargetPlaylist(name, isPublic = false) {
 
     // Se non esiste, la creiamo
     setStatus('Creo nuova playlist...', 'loading');
-    const resp = await spotifyFetch('https://api.spotify.com/v1/me/playlists', {
+    const resp = await spotifyFetch(`https://api.spotify.com/v1/users/${spotifyUserId}/playlists`, {
       method: 'POST',
       body: JSON.stringify({
         name: playlistName,
@@ -1076,7 +1076,7 @@ async function findOrCreateTargetPlaylist(name, isPublic = false) {
 
 async function getPlaylistTracks(playlistId) {
   try {
-    let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=items(track(name,artists(name))),next&limit=100`;
+    let url = `https://api.spotify.com/v1/playlists/${playlistId}/items?fields=items(track(name,artists(name))),next&limit=100`;
     const tracks = [];
     while (url) {
       const resp = await spotifyFetch(url);
