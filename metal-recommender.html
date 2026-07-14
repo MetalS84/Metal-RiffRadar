@@ -1050,7 +1050,7 @@ async function findOrCreateTargetPlaylist(name, isPublic = false) {
     let url = 'https://api.spotify.com/v1/me/playlists?limit=50';
     while (url) {
       const resp = await spotifyFetch(url);
-      const existing = resp.items?.find(p => p.name === playlistName);
+      const existing = resp.items?.find(p => p.name === playlistName && p.owner.id === spotifyUserId);
       if (existing) {
         return existing.id;
       }
