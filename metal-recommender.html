@@ -737,6 +737,7 @@ Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why
 let PLAYLISTS = [];
 
 let accessToken = null;
+let spotifyUserId = null;
 let selectedIndex = 0;
 let currentTracks = [];
 let addedUris = new Set();
@@ -767,6 +768,42 @@ function loadPlaylists() {
 
 function savePlaylists() {
   localStorage.setItem('heavy_finder_playlists', JSON.stringify(PLAYLISTS));
+  
+  if (spotifyUserId) {
+    fetch(`${WORKER_URL}/playlists`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: spotifyUserId,
+        playlists: PLAYLISTS
+      })
+    }).catch(e => console.error('Errore salvataggio cloud:', e));
+  }
+}
+
+async function syncPlaylistsFromCloud() {
+  if (!spotifyUserId) return;
+  try {
+    setStatus('Sincronizzo playlist...', 'loading');
+    const resp = await fetch(`${WORKER_URL}/playlists?user_id=${spotifyUserId}`);
+    if (resp.ok) {
+      const cloudPlaylists = await resp.json();
+      if (Array.isArray(cloudPlaylists) && cloudPlaylists.length > 0) {
+        PLAYLISTS = cloudPlaylists;
+        localStorage.setItem('heavy_finder_playlists', JSON.stringify(PLAYLISTS));
+        renderPlaylists();
+        selectPlaylist(0);
+        setStatus('Sincronizzazione completata', 'ok');
+      } else {
+        setStatus('Nessuna playlist in cloud, uso locali', 'ok');
+      }
+    } else {
+      setStatus('Errore caricamento cloud', 'error');
+    }
+  } catch(e) {
+    console.error('Errore sync cloud:', e);
+    setStatus('Errore sincronizzazione cloud', 'error');
+  }
 }
 
 function renderPlaylists() {
@@ -942,6 +979,7 @@ async function exchangeCode(code) {
 
 function logout() {
   accessToken = null;
+  spotifyUserId = null;
   localStorage.removeItem('spotify_token');
   localStorage.removeItem('spotify_token_exp');
   document.getElementById('login-overlay').style.display = 'flex';
@@ -953,11 +991,14 @@ async function initApp() {
   setStatus('Caricamento profilo...', 'loading');
   try {
     const me = await spotifyFetch('https://api.spotify.com/v1/me');
+    spotifyUserId = me.id;
     document.getElementById('user-info').classList.add('visible');
     document.getElementById('user-name').textContent = me.display_name || me.id;
     if (me.images && me.images[0]) document.getElementById('user-avatar').src = me.images[0].url;
     document.getElementById('login-overlay').style.display = 'none';
     setStatus('CONNESSO — ' + (me.display_name || me.id), 'ok');
+    
+    await syncPlaylistsFromCloud();
   } catch(e) {
     setStatus('Errore profilo: ' + e.message, 'error');
   }
