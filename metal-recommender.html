@@ -704,7 +704,7 @@
 <script>
 const CLIENT_ID = '2e0345cc0bf6488cb14cd74f15319b62';
 const REDIRECT_URI = 'https://metals84.github.io/Metal-RiffRadar/metal-recommender.html';
-const SCOPES = 'playlist-modify-public playlist-modify-private playlist-read-private user-read-private';
+const SCOPES = 'playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative user-read-private';
 const WORKER_URL = 'https://heavy-finder-proxy.stefano-zampieri-hm.workers.dev';
 
 const DEFAULT_PLAYLISTS = [
@@ -945,7 +945,8 @@ async function startAuth() {
     scope: SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
-    state: 'heavyfinder'
+    state: 'heavyfinder',
+    show_dialog: 'true'
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
@@ -1135,7 +1136,10 @@ async function generateRecommendations() {
       body: JSON.stringify({ prompt: dynamicPrompt })
     });
 
-    if (!workerResp.ok) throw new Error(`Worker error: ${workerResp.status}`);
+    if (!workerResp.ok) {
+      const errText = await workerResp.text();
+      throw new Error(`Worker error: ${workerResp.status} - ${errText}`);
+    }
 
     const workerData = await workerResp.json();
     const raw = workerData.text || '';
