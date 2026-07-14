@@ -459,6 +459,152 @@
       .track-album { display: none; }
       .status-bar { padding: 12px 16px; }
     }
+
+    /* Sidebar Dynamic additions */
+    .sidebar-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .add-playlist-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .add-playlist-btn:hover {
+      border-color: var(--accent);
+      background: rgba(232, 255, 0, 0.05);
+    }
+
+    /* Edit Mode and Prompt Styles */
+    .edit-icon-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      padding: 8px;
+    }
+    .edit-icon-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(232, 255, 0, 0.05);
+    }
+    .edit-icon-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    
+    .view-prompt-toggle {
+      margin-top: 16px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      display: inline-block;
+      border-bottom: 1px dashed var(--muted);
+      padding-bottom: 2px;
+      transition: color 0.15s;
+    }
+    .view-prompt-toggle:hover {
+      color: var(--text);
+    }
+    
+    .view-prompt-content {
+      margin-top: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .view-prompt-content pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 0;
+    }
+
+    .edit-field {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .edit-field label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+    }
+    .edit-input, .edit-textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 10px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .edit-input:focus, .edit-textarea:focus {
+      border-color: var(--accent);
+    }
+    .edit-textarea.code-font {
+      font-size: 11px;
+      color: #ccc;
+    }
+    .edit-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .save-btn, .cancel-btn, .delete-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 20px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .save-btn {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .save-btn:hover {
+      background: var(--accent);
+      color: #000;
+    }
+    .cancel-btn:hover {
+      border-color: var(--text);
+    }
+    .delete-btn {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      margin-left: auto;
+    }
+    .delete-btn:hover {
+      background: var(--accent2);
+      color: #000;
+    }
   </style>
 </head>
 <body>
@@ -483,27 +629,57 @@
 
 <div class="main">
   <div class="sidebar">
-    <div class="sidebar-title">PLAYLIST TARGET</div>
-
-    <div class="playlist-card p1 active" onclick="selectPlaylist(0)">
-      <div class="playlist-label">01 / HEAVY CORE</div>
-      <div class="playlist-name">Modern Metal & Djent</div>
-      <div class="playlist-desc">Metalcore, Djent, Nu-Metal. Riff pesanti, breakdown e prog tecnico.</div>
+    <div class="sidebar-title">
+      <span>PLAYLIST TARGET</span>
+      <button class="add-playlist-btn" onclick="addNewPlaylist()">+ NUOVA</button>
     </div>
-
-    <div class="playlist-card p2" onclick="selectPlaylist(1)">
-      <div class="playlist-label">02 / PROG INST</div>
-      <div class="playlist-name">Prog Strumentale & Fusion</div>
-      <div class="playlist-desc">Prog metal, strumentale, fusion. Meno aggressivo, più tecnico e atmosferico.</div>
+    <div id="playlist-list">
+      <!-- Generated dynamically -->
     </div>
   </div>
 
   <div class="content">
-    <div class="prompt-area">
-      <div class="selected-playlist-display p1" id="selected-title">Modern Metal & Djent</div>
-      <div class="selected-desc" id="selected-desc">
-        Una combinazione di Modern Metal, Metalcore e Progressive Metal/Djent. Artisti di riferimento: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar. Caratterizzata da riff pesanti, breakdown, componenti melodiche e tecniche. Chitarre 7/8 corde, accordature basse.
+    <div class="prompt-area" id="prompt-area">
+      <button class="edit-icon-btn" id="edit-mode-btn" onclick="enterEditMode()" title="Modifica profilo playlist">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+      </button>
+      
+      <!-- VIEW MODE -->
+      <div id="prompt-view-container">
+        <div class="selected-playlist-display p1" id="selected-title">Modern Metal & Djent</div>
+        <div class="selected-desc" id="selected-desc">
+          Una combinazione di Modern Metal, Metalcore e Progressive Metal/Djent. Artisti di riferimento: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar. Caratterizzata da riff pesanti, breakdown, componenti melodiche e tecniche. Chitarre 7/8 corde, accordature basse.
+        </div>
+        
+        <div class="view-prompt-toggle" onclick="togglePromptVisibility()">
+          <span id="prompt-toggle-icon">▶</span> PROMPT GEMINI (INGLESE)
+        </div>
+        <div class="view-prompt-content" id="view-prompt-content" style="display:none">
+          <pre id="selected-prompt"></pre>
+        </div>
       </div>
+
+      <!-- EDIT MODE -->
+      <div id="prompt-edit-container" style="display: none;">
+        <div class="edit-field">
+          <label for="edit-title">NOME PLAYLIST</label>
+          <input type="text" id="edit-title" class="edit-input">
+        </div>
+        <div class="edit-field">
+          <label for="edit-desc">DESCRIZIONE (ITALIANO)</label>
+          <textarea id="edit-desc" class="edit-textarea" rows="3"></textarea>
+        </div>
+        <div class="edit-field">
+          <label for="edit-prompt">PROMPT GEMINI (INGLESE)</label>
+          <textarea id="edit-prompt" class="edit-textarea code-font" rows="8"></textarea>
+        </div>
+        <div class="edit-actions">
+          <button class="save-btn" onclick="savePlaylistChanges()">💾 SALVA</button>
+          <button class="cancel-btn" onclick="exitEditMode()">❌ ANNULLA</button>
+          <button class="delete-btn" id="delete-playlist-btn" onclick="deleteCurrentPlaylist()">🗑️ ELIMINA</button>
+        </div>
+      </div>
+
       <button class="generate-btn" id="gen-btn" onclick="generateRecommendations()">
         <div class="spinner"></div>
         <span class="btn-text">⚡ GENERA SUGGERIMENTI</span>
@@ -531,10 +707,9 @@ const REDIRECT_URI = 'https://metals84.github.io/Metal-RiffRadar/metal-recommend
 const SCOPES = 'playlist-modify-public playlist-modify-private playlist-read-private user-read-private';
 const WORKER_URL = 'https://heavy-finder-proxy.stefano-zampieri-hm.workers.dev';
 
-const PLAYLISTS = [
+const DEFAULT_PLAYLISTS = [
   {
     label: 'Modern Metal & Djent',
-    color: 'p1',
     description: 'Una combinazione di Modern Metal, Metalcore e Progressive Metal/Djent. Artisti di riferimento: Like Moths To Flames, Bring Me The Horizon, DevilDriver, Plini, Andromida, Slipknot, Avatar. Caratterizzata da riff pesanti, breakdown, componenti melodiche e tecniche. Chitarre 7/8 corde, accordature basse.',
     prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
 - Genres: Modern Metal, Metalcore, Progressive Metal, Djent, Nu-Metal
@@ -547,7 +722,6 @@ Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why
   },
   {
     label: 'Prog Strumentale & Fusion',
-    color: 'p2',
     description: 'Prog metal e metal tecnico, privilegia brani strumentali, meno aggressivi. Prog rock come Plini, focus su chitarra elettrica incisiva (come Syncatto). Apre a sonorità fusion come Sunrise di Plini.',
     prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
 - Genres: Progressive Metal, Instrumental Metal, Prog Rock, Fusion, Djent instrumental
@@ -560,10 +734,156 @@ Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why
   }
 ];
 
+let PLAYLISTS = [];
+
 let accessToken = null;
 let selectedIndex = 0;
 let currentTracks = [];
 let addedUris = new Set();
+
+function getColorClass(index) {
+  const colors = ['p1', 'p2', 'p3'];
+  return colors[index % colors.length];
+}
+
+function loadPlaylists() {
+  const stored = localStorage.getItem('heavy_finder_playlists');
+  if (stored) {
+    try {
+      PLAYLISTS = JSON.parse(stored);
+    } catch(e) {
+      console.error("Error parsing stored playlists", e);
+      PLAYLISTS = [...DEFAULT_PLAYLISTS];
+    }
+  } else {
+    PLAYLISTS = [...DEFAULT_PLAYLISTS];
+    savePlaylists();
+  }
+  if (!PLAYLISTS || PLAYLISTS.length === 0) {
+    PLAYLISTS = [...DEFAULT_PLAYLISTS];
+    savePlaylists();
+  }
+}
+
+function savePlaylists() {
+  localStorage.setItem('heavy_finder_playlists', JSON.stringify(PLAYLISTS));
+}
+
+function renderPlaylists() {
+  const listEl = document.getElementById('playlist-list');
+  listEl.innerHTML = '';
+  
+  PLAYLISTS.forEach((pl, index) => {
+    const card = document.createElement('div');
+    const colorClass = getColorClass(index);
+    const labelNum = String(index + 1).padStart(2, '0');
+    
+    card.className = `playlist-card ${colorClass} ${index === selectedIndex ? 'active' : ''}`;
+    card.onclick = () => selectPlaylist(index);
+    
+    card.innerHTML = `
+      <div class="playlist-label">${labelNum} / ${pl.label.substring(0, 15).toUpperCase()}</div>
+      <div class="playlist-name">${esc(pl.label)}</div>
+      <div class="playlist-desc">${esc(pl.description)}</div>
+    `;
+    
+    listEl.appendChild(card);
+  });
+}
+
+function addNewPlaylist() {
+  const newPl = {
+    label: 'Nuova Playlist',
+    description: 'Inserisci qui la descrizione in italiano per questa playlist.',
+    prompt: `You are a music expert. Suggest 10 tracks that perfectly match this playlist profile:
+- Genres: Metal, Heavy Metal, ...
+- Reference artists: ...
+- Characteristics: ...
+- Mix well-known and deep-cut tracks, from any era
+- CRITICAL: only suggest tracks that actually exist on Spotify. Do not invent tracks.
+- Respond ONLY with a JSON array, no markdown, no preamble, no trailing text.
+Format: [{"title":"Track Name","artist":"Artist Name","reason":"one sentence why it fits"}]`
+  };
+  
+  PLAYLISTS.push(newPl);
+  savePlaylists();
+  renderPlaylists();
+  
+  selectPlaylist(PLAYLISTS.length - 1);
+  enterEditMode();
+}
+
+function enterEditMode() {
+  const pl = PLAYLISTS[selectedIndex];
+  
+  document.getElementById('edit-title').value = pl.label;
+  document.getElementById('edit-desc').value = pl.description;
+  document.getElementById('edit-prompt').value = pl.prompt;
+  
+  document.getElementById('prompt-view-container').style.display = 'none';
+  document.getElementById('prompt-edit-container').style.display = 'block';
+  document.getElementById('edit-mode-btn').style.display = 'none';
+  
+  const deleteBtn = document.getElementById('delete-playlist-btn');
+  if (PLAYLISTS.length <= 1) {
+    deleteBtn.style.display = 'none';
+  } else {
+    deleteBtn.style.display = 'block';
+  }
+}
+
+function exitEditMode() {
+  document.getElementById('prompt-view-container').style.display = 'block';
+  document.getElementById('prompt-edit-container').style.display = 'none';
+  document.getElementById('edit-mode-btn').style.display = 'flex';
+}
+
+function savePlaylistChanges() {
+  const newTitle = document.getElementById('edit-title').value.trim();
+  const newDesc = document.getElementById('edit-desc').value.trim();
+  const newPrompt = document.getElementById('edit-prompt').value.trim();
+  
+  if (!newTitle) {
+    alert("Il nome della playlist non può essere vuoto!");
+    return;
+  }
+  
+  PLAYLISTS[selectedIndex].label = newTitle;
+  PLAYLISTS[selectedIndex].description = newDesc;
+  PLAYLISTS[selectedIndex].prompt = newPrompt;
+  
+  savePlaylists();
+  renderPlaylists();
+  selectPlaylist(selectedIndex);
+}
+
+function deleteCurrentPlaylist() {
+  if (PLAYLISTS.length <= 1) {
+    alert("Non puoi eliminare l'unica playlist rimasta!");
+    return;
+  }
+  
+  if (confirm(`Sei sicuro di voler eliminare la playlist "${PLAYLISTS[selectedIndex].label}"?`)) {
+    PLAYLISTS.splice(selectedIndex, 1);
+    savePlaylists();
+    
+    selectedIndex = 0;
+    renderPlaylists();
+    selectPlaylist(0);
+  }
+}
+
+function togglePromptVisibility() {
+  const content = document.getElementById('view-prompt-content');
+  const icon = document.getElementById('prompt-toggle-icon');
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    icon.textContent = '▼';
+  } else {
+    content.style.display = 'none';
+    icon.textContent = '▶';
+  }
+}
 
 function generateCodeVerifier() {
   const array = new Uint8Array(32);
@@ -667,8 +987,12 @@ function selectPlaylist(index) {
   const pl = PLAYLISTS[index];
   const titleEl = document.getElementById('selected-title');
   titleEl.textContent = pl.label;
-  titleEl.className = 'selected-playlist-display ' + pl.color;
+  titleEl.className = 'selected-playlist-display ' + getColorClass(index);
   document.getElementById('selected-desc').textContent = pl.description;
+  document.getElementById('selected-prompt').textContent = pl.prompt;
+  
+  exitEditMode();
+  
   document.getElementById('tracks-grid').innerHTML = '';
   document.getElementById('results-title').textContent = '— IN ATTESA —';
   document.getElementById('add-all-btn').classList.remove('visible');
@@ -927,6 +1251,10 @@ function esc(str) {
 }
 
 (async () => {
+  loadPlaylists();
+  renderPlaylists();
+  selectPlaylist(0);
+
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const state = params.get('state');
