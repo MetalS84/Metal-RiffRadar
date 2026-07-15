@@ -945,8 +945,7 @@ async function startAuth() {
     scope: SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
-    state: 'heavyfinder',
-    show_dialog: 'true'
+    state: 'heavyfinder'
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
