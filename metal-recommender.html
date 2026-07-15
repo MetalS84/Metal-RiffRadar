@@ -1084,7 +1084,11 @@ async function getPlaylistTracks(playlistId) {
         for (const item of resp.items) {
           if (item.track) {
             const artists = item.track.artists.map(a => a.name).join(', ');
-            tracks.push(`${item.track.name} - ${artists}`);
+            tracks.push({
+              raw: `${item.track.name} - ${artists}`,
+              name: item.track.name,
+              artist: item.track.artists[0].name
+            });
             if (item.track.uri) uris.push(item.track.uri);
           }
         }
@@ -1129,7 +1133,7 @@ async function generateRecommendations() {
     let dynamicPrompt = pl.prompt;
     if (existingData.tracks.length > 0) {
       dynamicPrompt += `\n\nCRITICAL EXCLUSION: Do NOT suggest any of the following tracks because they are already present in the playlist:\n` + 
-                       existingData.tracks.map(t => `- ${t}`).join('\n');
+                       existingData.tracks.map(t => `- ${t.raw}`).join('\n');
     }
 
     setStatus('Chiedo suggerimenti a Gemini...', 'loading');
@@ -1170,11 +1174,18 @@ async function generateRecommendations() {
         const res = await spotifyFetch(`https://api.spotify.com/v1/search?q=${q}&type=track&limit=1`);
         if (res.tracks?.items?.length > 0) {
           const t = res.tracks.items[0];
-          const trackString = `${t.name} - ${t.artists.map(a => a.name).join(', ')}`;
+          // Helper per normalizzare le stringhe ignorando (Remastered), [Radio Edit], spazi e punteggiatura
+          const normalize = str => str.toLowerCase().replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').replace(/[^a-z0-9]/g, '');
           
-          // Controlla se il brano è già nella playlist (match per stringa o URI)
+          const newNameNorm = normalize(t.name);
+          const newArtistNorm = normalize(t.artists[0].name);
+          
+          // Controlla se il brano è già nella playlist (match URI o match stringa "robusto")
           const isDuplicate = addedUris.has(t.uri) || 
-                              existingData.tracks.some(existing => existing.toLowerCase() === trackString.toLowerCase());
+                              existingData.tracks.some(existing => 
+                                normalize(existing.name) === newNameNorm && 
+                                normalize(existing.artist) === newArtistNorm
+                              );
                               
           if (!isDuplicate) {
             currentTracks.push({ ...s, track: t });
